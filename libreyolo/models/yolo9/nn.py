@@ -536,8 +536,10 @@ class DDetect(nn.Module):
 
         for i, stride in enumerate(strides):
             _, _, h, w = feats[i].shape
-            sx = torch.arange(end=w, device=device, dtype=dtype) + grid_cell_offset
-            sy = torch.arange(end=h, device=device, dtype=dtype) + grid_cell_offset
+            # ONNX's Range op rejects fp16 inputs, so do the integer counting
+            # in fp32 and then cast to the model dtype. No effect on fp32 runs.
+            sx = torch.arange(end=w, device=device, dtype=torch.float32).to(dtype) + grid_cell_offset
+            sy = torch.arange(end=h, device=device, dtype=torch.float32).to(dtype) + grid_cell_offset
             sy, sx = torch.meshgrid(sy, sx, indexing="ij")
             anchor_points.append(torch.stack((sx, sy), -1).view(-1, 2))
             stride_tensor.append(
